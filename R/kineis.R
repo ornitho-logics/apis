@@ -128,14 +128,8 @@ kineis_db_ini <- function(path = '~/kineis_local_db.sqlite') {
 #'
 #' @examples
 #' \dontrun{
-#' crd = config::get(config = "kineis_api")
 #'
-#' kineis_save_real_time(
-#'   un = crd$un,
-#'   pwd = crd$pwd,
-#'   auth_url = crd$auth_url,
-#'   api_telemetry_url = crd$api_telemetry_url
-#' )
+#' kineis_save_real_time()
 #'
 #' }
 #' @export
@@ -146,6 +140,21 @@ kineis_save_real_time <- function(
   auth_url,
   api_telemetry_url
 ) {
+  # init
+
+  if (!file.exists(path)) {
+    kineis_db_ini(path)
+  }
+
+  if (missing(un) & missing(pwd)) {
+    crd = config::get(config = "kineis_api")
+
+    un = crd$un
+    pwd = crd$pwd
+    auth_url = crd$auth_url
+    api_telemetry_url = crd$api_telemetry_url
+  }
+
   tok = kineis_login(un = un, pwd = pwd, auth_url = auth_url)
 
   con = dbConnect(SQLite(), path)
@@ -168,6 +177,10 @@ kineis_save_real_time <- function(
     api_telemetry_url = crd$api_telemetry_url,
     checkpoint = db_checkpoint
   )
+
+  if (nrow(out) == 0) {
+    return(c(sensors = NA, doppler = NA, checkpoint = NA))
+  }
 
   new_checkpoint = attributes(out)$checkpoint
 
