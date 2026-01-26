@@ -184,18 +184,7 @@ kineis_save_real_time <- function(
 
   new_checkpoint = attributes(out)$checkpoint
 
-  d = out[, .(
-    deviceUid,
-    msgDatetime,
-    acqDatetime,
-    dopplerDatetime,
-    dopplerLocLon,
-    dopplerLocLat,
-    dopplerLocAlt,
-    dopplerLocErrorRadius,
-    dopplerLocClass
-  )]
-
+  # sensors
   sz = out[, .(deviceUid, msgDatetime, sensors)]
   sz[, sensors := paste0("{", sensors, "}")]
 
@@ -210,15 +199,37 @@ kineis_save_real_time <- function(
     variable.name = "sensor",
     value.name = "value"
   )
-
-  # Prepare for upload
+  szl = szl[!is.na(value)]
   szl[, sensor := str_extract(sensor, "\\d+")]
-  d = d[!is.na(dopplerLocLon)]
-  checkpoint = data.table(checkpoint = new_checkpoint, updated_at = Sys.time())
 
-  # write
-  a = dbAppendTable(con, "sensors", szl)
-  b = dbAppendTable(con, "doppler", d)
-  c = dbAppendTable(con, "checkpoint", checkpoint)
-  c(sensors = a, doppler = b, checkpoint = c)
+  wrtSens = dbAppendTable(con, "sensors", szl)
+
+  # checkpoint
+  checkpoint = data.table(checkpoint = new_checkpoint, updated_at = Sys.time())
+  wrtCheck = dbAppendTable(con, "checkpoint", checkpoint)
+
+  # doppler
+  gotDoppler = str_detect(names(out), "doppler") |> any()
+
+  if (!gotDoppler) {
+    return(c(sensors = wrtSens, doppler = NA, checkpoint = wrtCheck))
+  }
+
+  d = out[, .(
+    deviceUid,
+    msgDatetime,
+    acqDatetime,
+    dopplerDatetime,
+    dopplerLocLon,
+    dopplerLocLat,
+    dopplerLocAlt,
+    dopplerLocErrorRadius,
+    dopplerLocClass
+  )]
+
+  d = d[!is.na(dopplerLocLon)]
+
+  wrtDopl = dbAppendTable(con, "doppler", d)
+
+  c(sensors = wrtSens, doppler = wrtDopl, checkpoint = wrtCheck)
 }
