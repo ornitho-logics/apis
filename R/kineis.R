@@ -100,6 +100,8 @@ kineis_retrieve_realtime <- function(
     print(x)
   }
 
+  # TODO: sometimes the last saved checkpoint is bad and we grt a  HTTP 400 Bad Request.
+
   o = httr2::req_perform(x)
 
   o = httr2::resp_body_json(o, simplifyVector = FALSE)
