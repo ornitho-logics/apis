@@ -17,14 +17,8 @@ Save KINEIS realtime telemetry to disk (incremental)
 }
 \examples{
 \dontrun{
-crd = config::get(config = "kineis_api")
 
-kineis_save_real_time(
-  un = crd$un,
-  pwd = crd$pwd,
-  auth_url = crd$auth_url,
-  api_telemetry_url = crd$api_telemetry_url
-)
+kineis_save_real_time()
 
 }
 }
