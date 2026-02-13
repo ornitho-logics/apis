@@ -1,7 +1,7 @@
 
-# apis: R Package for Interacting with Argos and Ecotopia APIs
+# apis: R Package for Interacting with several APIs
 
-This package provides functions to interact with the Argos and DRUID Ecotopia APIs, allowing users to authenticate, retrieve device information, and access platform data, such as GPS locations, sensor readings, and more.
+This package provides functions to interact with the Argos, Kineis, DRUID Ecotopia APIs, allowing users to authenticate, retrieve device information, and access platform data, such as GPS locations, sensor readings, and more.
 
 ## Installation
 
