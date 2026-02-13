@@ -9,6 +9,7 @@
 #' @importFrom cli cli_progress_update
 #'
 #' @importFrom data.table :=
+#' @importFrom data.table let
 #' @importFrom data.table .BY
 #' @importFrom data.table .EACHI
 #' @importFrom data.table .GRP
@@ -22,6 +23,7 @@
 #' @importFrom data.table fread
 #' @importFrom data.table setattr
 #' @importFrom data.table melt
+#' @importFrom data.table setDT
 #'
 #' @importFrom glue glue
 #'

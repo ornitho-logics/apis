@@ -153,36 +153,63 @@ kineis_save_real_time <- function(
 
   db_checkpoint = dbGetQuery(
     con,
-    "SELECT checkpoint FROM checkpoint
+    "SELECT * FROM checkpoint
       ORDER BY id DESC
       LIMIT 1"
-  )
+  ) |>
+    setDT()
+
   if (nrow(db_checkpoint) == 0) {
     db_checkpoint = 0
   } else {
-    db_checkpoint = db_checkpoint$checkpoint |> as.numeric()
+    db_checkpoint[, let(
+      checkpoint = checkpoint |> as.numeric(),
+      updated_at = as.POSIXct(
+        updated_at |> as.numeric(),
+        origin = "1970-01-01",
+        tz = "UTC"
+      )
+    )]
   }
 
-  out = kineis_retrieve_realtime(
-    tok,
-    api_telemetry_url = crd$api_telemetry_url,
-    checkpoint = db_checkpoint
+  if (
+    as.numeric(difftime(
+      Sys.time(),
+      db_checkpoint$updated_at,
+      units = "hours"
+    )) >=
+      6
+  ) {
+    db_checkpoint[, checkpoint := 0]
+  }
+
+  out = try(
+    kineis_retrieve_realtime(
+      tok,
+      api_telemetry_url = crd$api_telemetry_url,
+      checkpoint = db_checkpoint$checkpoint
+    ),
+    silent = TRUE
   )
 
+  if (inherits(out, 'try-error')) {
+    out = kineis_retrieve_realtime(
+      tok,
+      api_telemetry_url = crd$api_telemetry_url,
+      checkpoint = 0
+    )
+  }
+
+  if (nrow(out) == 0) {
+    return(NULL)
+  }
+
+  # checkpoint
   new_checkpoint = attributes(out)$checkpoint
+  checkpoint = data.table(checkpoint = new_checkpoint, updated_at = Sys.time())
+  dbAppendTable(con, "checkpoint", checkpoint)
 
-  d = out[, .(
-    deviceUid,
-    msgDatetime,
-    acqDatetime,
-    dopplerDatetime,
-    dopplerLocLon,
-    dopplerLocLat,
-    dopplerLocAlt,
-    dopplerLocErrorRadius,
-    dopplerLocClass
-  )]
-
+  # sensors
   sz = out[, .(deviceUid, msgDatetime, sensors)]
   sz[, sensors := paste0("{", sensors, "}")]
 
@@ -197,15 +224,28 @@ kineis_save_real_time <- function(
     variable.name = "sensor",
     value.name = "value"
   )
-
-  # Prepare for upload
   szl[, sensor := str_extract(sensor, "\\d+")]
-  d = d[!is.na(dopplerLocLon)]
-  checkpoint = data.table(checkpoint = new_checkpoint, updated_at = Sys.time())
 
-  # write
-  a = dbAppendTable(con, "sensors", szl)
-  b = dbAppendTable(con, "doppler", d)
-  c = dbAppendTable(con, "checkpoint", checkpoint)
-  c(sensors = a, doppler = b, checkpoint = c)
+  dbAppendTable(con, "sensors", szl)
+
+  # locations
+  if (!'dopplerLocLon' %in% names(out)) {
+    return(NULL)
+  }
+
+  d = out[, .(
+    deviceUid,
+    msgDatetime,
+    acqDatetime,
+    dopplerDatetime,
+    dopplerLocLon,
+    dopplerLocLat,
+    dopplerLocAlt,
+    dopplerLocErrorRadius,
+    dopplerLocClass
+  )]
+
+  d = d[!is.na(dopplerLocLon)]
+
+  dbAppendTable(con, "doppler", d)
 }
