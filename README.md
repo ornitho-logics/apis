@@ -8,7 +8,7 @@ This package provides functions to interact with the Argos and DRUID Ecotopia AP
 You can install the `apis` package directly from GitHub:
 
 ```r
-remotes::install_github("mpio-be/apis")
+remotes::install_github("ornitho-logics/apis")
 ```
 
 ## Main Functions
