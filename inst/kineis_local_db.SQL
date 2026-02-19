@@ -33,6 +33,7 @@ CREATE INDEX sensors_by_dev_time ON sensors(deviceUid, msgDatetime);
 -- Doppler fixes  
 CREATE TABLE doppler(
   deviceUid INTEGER NOT NULL,
+  deviceRef CHAR , 
   msgDatetime TEXT NOT NULL,        -- ISO-8601 string
   acqDatetime TEXT,
   dopplerDatetime TEXT,

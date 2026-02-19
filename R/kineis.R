@@ -244,6 +244,7 @@ kineis_save_real_time <- function(
 
   d = out[, .(
     deviceUid,
+    deviceRef,
     msgDatetime,
     acqDatetime,
     dopplerDatetime,
