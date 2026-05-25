@@ -11,5 +11,10 @@ Various API interfaces (Druid, ARGOS-CLS, WoK, etc).
 \author{
 \strong{Maintainer}: Mihai Valcu \email{mvalcu@gwdg.de} (\href{https://orcid.org/0000-0002-6907-7802}{ORCID})
 
+Authors:
+\itemize{
+  \item Mihai Valcu \email{mvalcu@gwdg.de} (\href{https://orcid.org/0000-0002-6907-7802}{ORCID})
+}
+
 }
 \keyword{internal}
