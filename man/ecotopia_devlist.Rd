@@ -15,7 +15,8 @@ ecotopia_devlist(logstring, verbose = TRUE)
 a data.table
 }
 \description{
-List all devices for the given login profile
+Uses the device count endpoint and follows the paginated device endpoint
+with the stable device ID cursor until every device has been retrieved.
 }
 \examples{
 \dontrun{

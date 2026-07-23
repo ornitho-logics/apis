@@ -4,10 +4,14 @@ Version: 0.0.2
 Authors@R: 
     person("Mihai", "Valcu", , "mvalcu@gwdg.de", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0002-6907-7802"))
+Author: Mihai Valcu [aut, cre] (ORCID: <https://orcid.org/0000-0002-6907-7802>)
+Maintainer: Mihai Valcu <mvalcu@gwdg.de>
 Description: Various API interfaces (Druid, ARGOS-CLS, WoK, etc).
 License: GPL (>= 3)
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
+Depends:
+    R (>= 4.1.0)
 Imports:
     methods,
     utils,
@@ -15,6 +19,8 @@ Imports:
     curl (>= 7.0.0),
     glue,
     data.table,
+    DBI,
+    RSQLite,
     openssl,
     cli,
     stringr,
@@ -22,7 +28,8 @@ Imports:
     lubridate,
     jsonlite
 Suggests:
-    config    
+    config,
+    testthat
 Config/testthat/edition: 3
 Language: en-US
 Config/roxygen2/version: 8.0.0
