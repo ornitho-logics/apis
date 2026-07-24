@@ -4,7 +4,13 @@
 \alias{kineis_login}
 \title{KINEIS login token (JWT)}
 \usage{
-kineis_login(un, pwd, auth_url, client_id = "api-telemetry", verbose = TRUE)
+kineis_login(
+  un,
+  pwd,
+  auth_url,
+  client_id = "api-telemetry",
+  verbose = interactive()
+)
 }
 \arguments{
 \item{un}{username (from config if missing)}
@@ -15,7 +21,7 @@ kineis_login(un, pwd, auth_url, client_id = "api-telemetry", verbose = TRUE)
 
 \item{client_id}{oauth client id}
 
-\item{verbose}{print \link[httr2:request]{httr2::request} string. Default to TRUE.}
+\item{verbose}{print \link[httr2:request]{httr2::request} string. Defaults to \code{\link[=interactive]{interactive()}}.}
 }
 \value{
 a list with \code{access_token} plus other token fields

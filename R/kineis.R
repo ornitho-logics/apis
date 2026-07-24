@@ -4,7 +4,7 @@
 #' @param pwd password (from config if missing)
 #' @param auth_url token endpoint (from config if missing)
 #' @param client_id oauth client id
-#' @param verbose print [httr2::request] string. Default to TRUE.
+#' @param verbose print [httr2::request] string. Defaults to [interactive()].
 #'
 #' @return a list with `access_token` plus other token fields
 #' @export
@@ -14,7 +14,7 @@ kineis_login <- function(
   pwd,
   auth_url,
   client_id = "api-telemetry",
-  verbose = TRUE
+  verbose = interactive()
 ) {
   req = httr2::request(auth_url) |>
     httr2::req_method("POST") |>
@@ -46,7 +46,7 @@ kineis_login <- function(
 #' @param deviceRefs character vector of device refs; empty means "all available"
 #' @param datetimeFormat "DATETIME" unless you know other accepted values
 #' @param retrieveMetadata,retrieveRawData,retrieveDoppler,retrieveGpsLoc,retrieveSensors,retrieveAdditionnalProperties flags
-#' @param verbose Default to TRUE.
+#' @param verbose print [httr2::request] string. Defaults to [interactive()].
 #'
 #' @return a list with `checkpoint`, `data` (data.table, possibly empty), and `raw` (full parsed JSON)
 #' @examples
@@ -70,7 +70,7 @@ kineis_retrieve_realtime <- function(
   retrieveSensors = TRUE,
   retrieveAdditionnalProperties = TRUE,
   datetimeFormat = "DATETIME",
-  verbose = TRUE
+  verbose = interactive()
 ) {
   access_token = token$access_token
 

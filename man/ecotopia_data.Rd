@@ -2,41 +2,56 @@
 % Please edit documentation in R/druid.R
 \name{ecotopia_data}
 \alias{ecotopia_data}
-\title{Download gps data of a given id after a given datetime}
+\title{Download all data of one type for an Ecotopia device}
 \usage{
 ecotopia_data(
   logstring,
   id,
   datetime = "2000-01-01T00:00:00Z",
   what = "gps",
-  verbose = TRUE
+  verbose = interactive(),
+  end_datetime = NULL
 )
 }
 \arguments{
-\item{logstring}{login string as returned by \link{ecotopia_login}}
+\item{logstring}{Login string returned by \code{\link[=ecotopia_login]{ecotopia_login()}}.}
 
-\item{id}{device ID (e.g 640dab1c6f2d20ea33538465)}
+\item{id}{Ecotopia device ID.}
 
-\item{datetime}{datetime string ("2000-01-01T00:00:00Z")}
+\item{datetime}{Start timestamp in RFC 3339 format.}
 
-\item{what}{data type: "gps", "odba" , "sms" or "env"}
+\item{what}{API data route, including \code{"gps"}, \code{"env"}, \code{"sms"},
+\code{"behavior2"}, \code{"structured"}, \code{"celltower"}, \code{"origin"} and \code{"beacon"}.
+\code{"odba"} is an alias for \code{"behavior2"}; \code{"behavior"} and \code{"behaviour"} are
+aliases for \code{"structured"}. Structured algorithm behaviour is Ecotopia data type 18.}
 
-\item{verbose}{print \link[httr2:request]{httr2::request} string. Default to TRUE.}
+\item{verbose}{Print the \link[httr2:request]{httr2::request} objects. Defaults to
+\code{\link[=interactive]{interactive()}}.}
+
+\item{end_datetime}{Optional exclusive end timestamp in RFC 3339 format.}
 }
 \value{
-a data.table
+A data.table containing the raw API records.
 }
 \description{
-Download gps data of a given id after a given datetime
+Follows the timestamp-cursor endpoint until no more records are available.
+The API record ID and all other returned fields are preserved.
 }
 \examples{
 \dontrun{
-crd = config::get(config = "druid_api")
-logstring <- ecotopia_login(crd$generic$un, crd$generic$pwd, crd$kw1, crd$kw2)
-dl = ecotopia_devlist(logstring)
-x = ecotopia_data(logstring, dl$id[100], what = "gps")
-x = ecotopia_data(logstring, dl$id[100], what = "odba")
-x = ecotopia_data(logstring, dl$id[100], what = "sms")
+crd <- config::get(config = "druid_api")
+logstring <- ecotopia_login(
+  crd$generic$un,
+  crd$generic$pwd,
+  crd$kw1,
+  crd$kw2
+)
+devices <- ecotopia_devlist(logstring)
+behavior <- ecotopia_data(
+  logstring,
+  '68d4a842c3d77b735bfd9d96',
+  datetime = "2026-06-01T00:00:00Z",
+  what = "structured"
+)
 }
-
 }

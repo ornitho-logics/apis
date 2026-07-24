@@ -16,7 +16,7 @@ kineis_retrieve_realtime(
   retrieveSensors = TRUE,
   retrieveAdditionnalProperties = TRUE,
   datetimeFormat = "DATETIME",
-  verbose = TRUE
+  verbose = interactive()
 )
 }
 \arguments{
@@ -32,7 +32,7 @@ kineis_retrieve_realtime(
 
 \item{datetimeFormat}{"DATETIME" unless you know other accepted values}
 
-\item{verbose}{Default to TRUE.}
+\item{verbose}{print \link[httr2:request]{httr2::request} string. Defaults to \code{\link[=interactive]{interactive()}}.}
 }
 \value{
 a list with \code{checkpoint}, \code{data} (data.table, possibly empty), and \code{raw} (full parsed JSON)

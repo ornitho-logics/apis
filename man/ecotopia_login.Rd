@@ -2,35 +2,40 @@
 % Please edit documentation in R/druid.R
 \name{ecotopia_login}
 \alias{ecotopia_login}
-\title{ecotopia login token}
+\title{Ecotopia login token ----}
 \usage{
-ecotopia_login(un, pwd, kw1, kw2, verbose = TRUE)
+ecotopia_login(un, pwd, kw1, kw2, verbose = interactive())
 }
 \arguments{
-\item{un}{username}
+\item{un}{Username.}
 
-\item{pwd}{password}
+\item{pwd}{Password.}
 
-\item{kw1}{keyword 1}
+\item{kw1}{First password-signature keyword.}
 
-\item{kw2}{keyword 2}
+\item{kw2}{Second password-signature keyword.}
 
-\item{verbose}{print \link[httr2:request]{httr2::request} string. Default to TRUE.}
+\item{verbose}{Print the \link[httr2:request]{httr2::request} object. Defaults to
+\code{\link[=interactive]{interactive()}}.}
 }
 \value{
-a character string
+A character authentication token.
 }
 \description{
-ecotopia login token
+Ecotopia login token ----
 }
 \note{
-For security, credentials should either be stored in a configuration file or entered interactively at runtime.
-Avoid hardcoding credentials directly in your scripts. See examples for more details.
+Store credentials in a configuration file or enter them
+interactively. Do not hardcode them in scripts.
 }
 \examples{
 \dontrun{
-crd = config::get(config = "druid_api")
-logstring = ecotopia_login(crd$generic$un, crd$generic$pwd, crd$kw1, crd$kw2)
+crd <- config::get(config = "druid_api")
+logstring <- ecotopia_login(
+  crd$generic$un,
+  crd$generic$pwd,
+  crd$kw1,
+  crd$kw2
+)
 }
-
 }
