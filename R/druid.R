@@ -215,6 +215,13 @@ ecotopia_devlist <- function(logstring, verbose = interactive()) {
 #'   datetime = "2026-06-01T00:00:00Z",
 #'   what = "structured"
 #' )
+#' gps <- ecotopia_data(
+#'   logstring,
+#'   '68d4a842c3d77b735bfd9d96',
+#'   datetime = "2026-06-01T00:00:00Z",
+#'   what = "gps"
+#' )
+#'
 #' }
 ecotopia_data <- function(
   logstring,
