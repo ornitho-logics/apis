@@ -181,7 +181,7 @@ ecotopia_devlist <- function(logstring, verbose = interactive()) {
 }
 
 
-#' Download all data of one type for an Ecotopia device
+#' Download all data of one type for an Ecotopia device ----
 #'
 #' Follows the timestamp-cursor endpoint until no more records are available.
 #' The API record ID and all other returned fields are preserved.
