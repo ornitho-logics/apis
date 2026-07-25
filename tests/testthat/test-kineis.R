@@ -190,42 +190,6 @@ test_that("kineis_data resumes from a supplied bulk cursor", {
 })
 
 
-test_that("kineis_data_count requests an account-wide interval", {
-  local_mocked_bindings(
-    req_perform = function(req) {
-      expect_equal(
-        as.character(req$url),
-        paste0(
-          "https://api.example/telemetry/api/v1/",
-          "retrieve-bulk-count"
-        )
-      )
-      expect_equal(
-        req$body$data$fromDatetime,
-        "2026-07-01T00:00:00.000Z"
-      )
-      expect_equal(
-        req$body$data$toDatetime,
-        "2026-07-02T00:00:00.000Z"
-      )
-      expect_false("deviceRefs" %in% names(req$body$data))
-      kineis_json_response('{"totalCount":9223372036854}')
-    },
-    .package = "apis"
-  )
-
-  result <- kineis_data_count(
-    "secret-token",
-    "https://api.example/telemetry/api/v1",
-    datetime = "2026-07-01T00:00:00.000Z",
-    end_datetime = "2026-07-02T00:00:00.000Z",
-    verbose = FALSE
-  )
-
-  expect_equal(result, 9223372036854)
-})
-
-
 test_that("kineis_data can stream pages without collecting them", {
   handled <- 0L
 

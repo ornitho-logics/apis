@@ -375,7 +375,7 @@ kineis_devlist <- function(
 kineis_data <- function(
   token,
   api_telemetry_url,
-  datetime = "2000-01-01T00:00:00.000Z",
+  datetime = "2026-01-01T00:00:00.000Z",
   end_datetime = NULL,
   device_refs = character(),
   page_size = 100L,
@@ -500,73 +500,4 @@ kineis_data <- function(
   }
 
   rbindlist(pages, use.names = TRUE, fill = TRUE)
-}
-
-
-#' Count Kineis telemetry messages in a time interval ----
-#'
-#' Uses the bulk-count endpoint without a device filter, so the result covers
-#' every device available to the login profile. This is useful for sizing
-#' bounded historical download windows before retrieving their pages.
-#'
-#' @inheritParams kineis_data
-#'
-#' @return The total message count as a numeric scalar.
-#' @export
-#' @examples
-#' \dontrun{
-#' crd <- config::get(config = "kineis_api")
-#' token <- kineis_login(crd$un, crd$pwd, crd$auth_url)
-#' count <- kineis_data_count(
-#'   token,
-#'   crd$api_telemetry_url,
-#'   datetime = "2026-07-01T00:00:00.000Z",
-#'   end_datetime = "2026-07-02T00:00:00.000Z"
-#' )
-#' }
-kineis_data_count <- function(
-  token,
-  api_telemetry_url,
-  datetime,
-  end_datetime = NULL,
-  verbose = interactive()
-) {
-  payload <- list(fromDatetime = datetime)
-
-  if (!is.null(end_datetime)) {
-    payload$toDatetime <- end_datetime
-  }
-
-  body <- .kineis_perform_authenticated(
-    token,
-    function(access_token) {
-      x <- request(
-        .kineis_url(api_telemetry_url, "retrieve-bulk-count")
-      ) |>
-        req_headers(
-          accept = "application/json",
-          Authorization = glue("Bearer {access_token}")
-        ) |>
-        req_body_json(payload) |>
-        .kineis_request_policy()
-
-      if (verbose) {
-        .kineis_print_request(x)
-      }
-
-      x
-    }
-  ) |>
-    .kineis_response_body()
-
-  count <- suppressWarnings(as.numeric(body$totalCount))
-
-  if (length(count) != 1 || is.na(count) || !is.finite(count) || count < 0) {
-    stop(
-      "Kineis bulk-count response has no valid `totalCount`.",
-      call. = FALSE
-    )
-  }
-
-  count
 }
