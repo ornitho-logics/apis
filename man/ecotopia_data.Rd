@@ -2,7 +2,7 @@
 % Please edit documentation in R/druid.R
 \name{ecotopia_data}
 \alias{ecotopia_data}
-\title{Download all data of one type for an Ecotopia device}
+\title{Download all data of one type for an Ecotopia device ----}
 \usage{
 ecotopia_data(
   logstring,
@@ -53,5 +53,12 @@ behavior <- ecotopia_data(
   datetime = "2026-06-01T00:00:00Z",
   what = "structured"
 )
+gps <- ecotopia_data(
+  logstring,
+  '68d4a842c3d77b735bfd9d96',
+  datetime = "2026-06-01T00:00:00Z",
+  what = "gps"
+)
+
 }
 }

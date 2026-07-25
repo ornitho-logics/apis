@@ -2,7 +2,7 @@
 % Please edit documentation in R/kineis.R
 \name{kineis_login}
 \alias{kineis_login}
-\title{KINEIS login token (JWT)}
+\title{Kineis login token (JWT) ----}
 \usage{
 kineis_login(
   un,
@@ -13,19 +13,34 @@ kineis_login(
 )
 }
 \arguments{
-\item{un}{username (from config if missing)}
+\item{un}{Username.}
 
-\item{pwd}{password (from config if missing)}
+\item{pwd}{Password.}
 
-\item{auth_url}{token endpoint (from config if missing)}
+\item{auth_url}{OAuth token endpoint.}
 
-\item{client_id}{oauth client id}
+\item{client_id}{OAuth client ID.}
 
-\item{verbose}{print \link[httr2:request]{httr2::request} string. Defaults to \code{\link[=interactive]{interactive()}}.}
+\item{verbose}{Print the \link[httr2:request]{httr2::request} object. Defaults to
+\code{\link[=interactive]{interactive()}}.}
 }
 \value{
-a list with \code{access_token} plus other token fields
+A list containing \code{access_token} and the other token fields.
 }
 \description{
-KINEIS login token (JWT)
+Kineis login token (JWT) ----
+}
+\note{
+Store credentials in a configuration file or enter them
+interactively. Do not hardcode them in scripts.
+}
+\examples{
+\dontrun{
+crd <- config::get(config = "kineis_api")
+token <- kineis_login(
+  un = crd$un,
+  pwd = crd$pwd,
+  auth_url = crd$auth_url
+)
+}
 }

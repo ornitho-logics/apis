@@ -21,9 +21,6 @@
 #' @importFrom data.table as.data.table
 #' @importFrom data.table rbindlist
 #' @importFrom data.table fread
-#' @importFrom data.table setattr
-#' @importFrom data.table melt
-#' @importFrom data.table setDT
 #'
 #' @importFrom glue glue
 #'
@@ -42,7 +39,6 @@
 #' @importFrom stringr str_split
 #' @importFrom stringr str_replace_all
 #' @importFrom stringr str_detect
-#' @importFrom stringr str_extract
 #' @importFrom stringr str_remove
 #'
 #' @importFrom xml2 xml_find_all
@@ -56,15 +52,6 @@
 #' @importFrom lubridate with_tz
 #' @importFrom lubridate days
 #' @importFrom lubridate ymd_hms
-#'
-#' @importFrom jsonlite  fromJSON
-#'
-#' @importFrom DBI dbConnect
-#' @importFrom DBI dbDisconnect
-#' @importFrom DBI dbGetQuery
-#' @importFrom DBI dbAppendTable
-#'
-#' @importFrom RSQLite SQLite
 #'
 #'
 #'
