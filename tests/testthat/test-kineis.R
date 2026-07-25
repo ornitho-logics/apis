@@ -8,6 +8,7 @@ kineis_json_response <- function(body) {
 
 test_that("kineis_data follows bulk pagination and preserves long IDs", {
   requested_cursors <- list()
+  handled_pages <- list()
 
   local_mocked_bindings(
     req_perform = function(req) {
@@ -24,8 +25,19 @@ test_that("kineis_data follows bulk pagination and preserves long IDs", {
         as.character(req$url),
         "https://api.example/telemetry/api/v1/retrieve-bulk"
       )
+      expect_equal(
+        req$policies$throttle_realm,
+        "kineis-telemetry-api"
+      )
+      expect_equal(req$policies$retry_max_tries, 8)
+      expect_equal(req$policies$retry_max_wait, 600)
+      expect_true(req$policies$retry_on_failure)
       expect_equal(payload$pagination$first, 2L)
       expect_equal(payload$deviceRefs, list("device-a"))
+      expect_equal(
+        payload$sortBy,
+        list(list(field = "msgDatetime", sortDirection = "ASC"))
+      )
       expect_equal(
         payload$fromDatetime,
         "2026-07-01T00:00:00.000Z"
@@ -70,7 +82,10 @@ test_that("kineis_data follows bulk pagination and preserves long IDs", {
     end_datetime = "2026-07-02T00:00:00.000Z",
     device_refs = "device-a",
     page_size = 2,
-    verbose = FALSE
+    verbose = FALSE,
+    page_handler = function(page) {
+      handled_pages[[length(handled_pages) + 1]] <<- page
+    }
   )
 
   expect_s3_class(result, "data.table")
@@ -84,6 +99,40 @@ test_that("kineis_data follows bulk pagination and preserves long IDs", {
   expect_equal(result$sensors.POWER, c(NA, "5.2"))
   expect_true(is.na(requested_cursors[[1]]))
   expect_equal(requested_cursors[[2]], "0")
+  expect_length(handled_pages, 2)
+  expect_equal(handled_pages[[1]]$deviceMsgUid, "9223372036854775806")
+  expect_equal(handled_pages[[2]]$deviceMsgUid, "9223372036854775805")
+})
+
+
+test_that("kineis_data can stream pages without collecting them", {
+  handled <- 0L
+
+  local_mocked_bindings(
+    req_perform = function(req) {
+      kineis_json_response(
+        paste0(
+          '{"contents":[{"deviceMsgUid":1}],',
+          '"pageInfo":{"hasNextPage":false}}'
+        )
+      )
+    },
+    .package = "apis"
+  )
+
+  result <- kineis_data(
+    "secret-token",
+    "https://api.example/telemetry/api/v1",
+    verbose = FALSE,
+    page_handler = function(page) {
+      handled <<- handled + nrow(page)
+    },
+    collect = FALSE
+  )
+
+  expect_equal(handled, 1L)
+  expect_s3_class(result, "data.table")
+  expect_equal(dim(result), c(0, 0))
 })
 
 
@@ -94,6 +143,13 @@ test_that("kineis_devlist requests and parses the device list", {
         as.character(req$url),
         "https://api.example/telemetry/api/v1/retrieve-device-list"
       )
+      expect_equal(
+        req$policies$throttle_realm,
+        "kineis-telemetry-api"
+      )
+      expect_equal(req$policies$retry_max_tries, 8)
+      expect_equal(req$policies$retry_max_wait, 600)
+      expect_true(req$policies$retry_on_failure)
       expect_equal(rawToChar(req$body$data), "{}")
       kineis_json_response(
         '[{"deviceUid":123,"deviceRef":"device-a"}]'

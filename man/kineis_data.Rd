@@ -18,7 +18,9 @@ kineis_data(
   retrieve_sensors = TRUE,
   retrieve_additional_properties = TRUE,
   datetime_format = "DATETIME",
-  verbose = interactive()
+  verbose = interactive(),
+  page_handler = NULL,
+  collect = TRUE
 )
 }
 \arguments{
@@ -47,6 +49,12 @@ properties. This maps to the API's misspelled
 
 \item{verbose}{Print the \link[httr2:request]{httr2::request} objects. Defaults to
 \code{\link[=interactive]{interactive()}}.}
+
+\item{page_handler}{Optional function called with each non-empty page before
+the next page is requested. This permits incremental database writes.}
+
+\item{collect}{Retain and return all downloaded pages. Set to \code{FALSE} when a
+\code{page_handler} persists each page and the combined result is not needed.}
 }
 \value{
 A data.table with one row per telemetry message.
@@ -57,6 +65,10 @@ the requested interval has been retrieved. All fields returned by the API
 are preserved. Nested metadata and sensor fields are flattened with their
 parent name (for example, \code{kineisMetadata.sat} and \code{sensors.TEMP}). Identifier
 columns use character storage so 64-bit values remain exact.
+Messages are requested in ascending \code{msgDatetime} order. Requests are paced
+to one per five seconds. HTTP 429 and 503 responses are retried
+up to eight times within ten minutes, honoring the server's \code{Retry-After}
+header when present.
 }
 \examples{
 \dontrun{

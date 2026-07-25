@@ -83,6 +83,22 @@ kineis_login <- function(
 }
 
 
+.kineis_request_policy <- function(x) {
+  x |>
+    httr2::req_throttle(
+      capacity = 1L,
+      fill_time_s = 5,
+      realm = "kineis-telemetry-api"
+    ) |>
+    httr2::req_retry(
+      max_tries = 8L,
+      max_seconds = 600L,
+      retry_on_failure = TRUE,
+      failure_realm = "kineis-telemetry-api"
+    )
+}
+
+
 .kineis_print_request <- function(x) {
   x |>
     req_headers(Authorization = "Bearer <redacted>") |>
@@ -144,7 +160,11 @@ kineis_login <- function(
       retrieve_additional_properties
     ),
     deviceRefs = as.list(device_refs),
-    datetimeFormat = datetime_format
+    datetimeFormat = datetime_format,
+    sortBy = list(list(
+      field = "msgDatetime",
+      sortDirection = "ASC"
+    ))
   )
 }
 
@@ -155,6 +175,9 @@ kineis_login <- function(
 #' @param api_telemetry_url Kineis telemetry API base URL.
 #' @param verbose Print the [httr2::request] object. Defaults to
 #'   [interactive()].
+#'
+#' Requests are paced to one per five seconds. HTTP 429 and 503 responses are retried,
+#' honoring the server's `Retry-After` header when present.
 #'
 #' @return A data.table containing all devices available to the login profile.
 #' @export
@@ -177,7 +200,8 @@ kineis_devlist <- function(
       accept = "application/json",
       Authorization = glue("Bearer {access_token}")
     ) |>
-    req_body_raw(charToRaw("{}"), type = "application/json")
+    req_body_raw(charToRaw("{}"), type = "application/json") |>
+    .kineis_request_policy()
 
   if (verbose) {
     .kineis_print_request(x)
@@ -252,7 +276,8 @@ kineis_devlist <- function(
       accept = "application/json",
       Authorization = glue("Bearer {access_token}")
     ) |>
-    req_body_json(payload)
+    req_body_json(payload) |>
+    .kineis_request_policy()
 
   if (verbose) {
     .kineis_print_request(x)
@@ -270,6 +295,10 @@ kineis_devlist <- function(
 #' are preserved. Nested metadata and sensor fields are flattened with their
 #' parent name (for example, `kineisMetadata.sat` and `sensors.TEMP`). Identifier
 #' columns use character storage so 64-bit values remain exact.
+#' Messages are requested in ascending `msgDatetime` order. Requests are paced
+#' to one per five seconds. HTTP 429 and 503 responses are retried
+#' up to eight times within ten minutes, honoring the server's `Retry-After`
+#' header when present.
 #'
 #' @param token Access-token string or the full result of [kineis_login()].
 #' @param api_telemetry_url Kineis telemetry API base URL.
@@ -287,6 +316,10 @@ kineis_devlist <- function(
 #' @param datetime_format Response timestamp format. Defaults to `"DATETIME"`.
 #' @param verbose Print the [httr2::request] objects. Defaults to
 #'   [interactive()].
+#' @param page_handler Optional function called with each non-empty page before
+#'   the next page is requested. This permits incremental database writes.
+#' @param collect Retain and return all downloaded pages. Set to `FALSE` when a
+#'   `page_handler` persists each page and the combined result is not needed.
 #'
 #' @return A data.table with one row per telemetry message.
 #' @export
@@ -315,7 +348,9 @@ kineis_data <- function(
   retrieve_sensors = TRUE,
   retrieve_additional_properties = TRUE,
   datetime_format = "DATETIME",
-  verbose = interactive()
+  verbose = interactive(),
+  page_handler = NULL,
+  collect = TRUE
 ) {
   if (
     !is.numeric(page_size) ||
@@ -327,6 +362,14 @@ kineis_data <- function(
       page_size != floor(page_size)
   ) {
     stop("`page_size` must be one positive integer.", call. = FALSE)
+  }
+
+  if (!is.null(page_handler) && !is.function(page_handler)) {
+    stop("`page_handler` must be a function or NULL.", call. = FALSE)
+  }
+
+  if (!is.logical(collect) || length(collect) != 1 || is.na(collect)) {
+    stop("`collect` must be TRUE or FALSE.", call. = FALSE)
   }
 
   pages <- list()
@@ -354,7 +397,13 @@ kineis_data <- function(
     page <- .kineis_contents(body)
 
     if (nrow(page) > 0) {
-      pages[[length(pages) + 1]] <- page
+      if (collect) {
+        pages[[length(pages) + 1]] <- page
+      }
+
+      if (!is.null(page_handler)) {
+        page_handler(page)
+      }
     }
 
     page_info <- body$pageInfo
