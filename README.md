@@ -9,7 +9,6 @@ sensor values, behaviour, and other telemetry.
 ```r
 remotes::install_github("ornitho-logics/apis")
 ```
-
 ## Argos API
 
 1. `argos_login(un, pwd, wsdl_server)`: Authenticate.
