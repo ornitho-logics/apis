@@ -20,7 +20,8 @@ kineis_data(
   datetime_format = "DATETIME",
   verbose = interactive(),
   page_handler = NULL,
-  collect = TRUE
+  collect = TRUE,
+  after_cursor = NULL
 )
 }
 \arguments{
@@ -52,10 +53,15 @@ properties. This maps to the API's misspelled
 \code{\link[=interactive]{interactive()}}.}
 
 \item{page_handler}{Optional function called with each non-empty page before
-the next page is requested. This permits incremental database writes.}
+the next page is requested. This permits incremental database writes. A
+handler with a second argument also receives the page's \code{pageInfo}.}
 
 \item{collect}{Retain and return all downloaded pages. Set to \code{FALSE} when a
 \code{page_handler} persists each page and the combined result is not needed.}
+
+\item{after_cursor}{Optional \code{endCursor} returned by an earlier request for
+the same time interval and filters. This resumes an interrupted
+pagination pass.}
 }
 \value{
 A data.table with one row per telemetry message.

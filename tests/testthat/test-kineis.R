@@ -67,6 +67,7 @@ test_that("Kineis requests renew a provider token after HTTP 401", {
 test_that("kineis_data follows bulk pagination and preserves long IDs", {
   requested_cursors <- list()
   handled_pages <- list()
+  handled_page_info <- list()
 
   local_mocked_bindings(
     req_perform = function(req) {
@@ -141,8 +142,9 @@ test_that("kineis_data follows bulk pagination and preserves long IDs", {
     device_refs = "device-a",
     page_size = 2,
     verbose = FALSE,
-    page_handler = function(page) {
+    page_handler = function(page, page_info) {
       handled_pages[[length(handled_pages) + 1]] <<- page
+      handled_page_info[[length(handled_page_info) + 1]] <<- page_info
     }
   )
 
@@ -158,8 +160,69 @@ test_that("kineis_data follows bulk pagination and preserves long IDs", {
   expect_true(is.na(requested_cursors[[1]]))
   expect_equal(requested_cursors[[2]], "0")
   expect_length(handled_pages, 2)
+  expect_equal(handled_page_info[[1]]$endCursor, "0")
+  expect_false(handled_page_info[[2]]$hasNextPage)
   expect_equal(handled_pages[[1]]$deviceMsgUid, "9223372036854775806")
   expect_equal(handled_pages[[2]]$deviceMsgUid, "9223372036854775805")
+})
+
+
+test_that("kineis_data resumes from a supplied bulk cursor", {
+  local_mocked_bindings(
+    req_perform = function(req) {
+      expect_equal(req$body$data$pagination$after, "299")
+      kineis_json_response(
+        '{"contents":[],"pageInfo":{"hasNextPage":false}}'
+      )
+    },
+    .package = "apis"
+  )
+
+  result <- kineis_data(
+    "secret-token",
+    "https://api.example/telemetry/api/v1",
+    after_cursor = "299",
+    verbose = FALSE
+  )
+
+  expect_s3_class(result, "data.table")
+  expect_equal(dim(result), c(0, 0))
+})
+
+
+test_that("kineis_data_count requests an account-wide interval", {
+  local_mocked_bindings(
+    req_perform = function(req) {
+      expect_equal(
+        as.character(req$url),
+        paste0(
+          "https://api.example/telemetry/api/v1/",
+          "retrieve-bulk-count"
+        )
+      )
+      expect_equal(
+        req$body$data$fromDatetime,
+        "2026-07-01T00:00:00.000Z"
+      )
+      expect_equal(
+        req$body$data$toDatetime,
+        "2026-07-02T00:00:00.000Z"
+      )
+      expect_false("deviceRefs" %in% names(req$body$data))
+      kineis_json_response('{"totalCount":9223372036854}')
+    },
+    .package = "apis"
+  )
+
+  result <- kineis_data_count(
+    "secret-token",
+    "https://api.example/telemetry/api/v1",
+    datetime = "2026-07-01T00:00:00.000Z",
+    end_datetime = "2026-07-02T00:00:00.000Z",
+    verbose = FALSE
+  )
+
+  expect_equal(result, 9223372036854)
 })
 
 

@@ -195,14 +195,14 @@ kineis_login <- function(
 
 #' List all Kineis devices for the login profile ----
 #'
+#' Requests are paced to one per five seconds. HTTP 429 and 503 responses are retried,
+#' honoring the server's `Retry-After` header when present.
+#'
 #' @param token Access-token string, the full result of [kineis_login()], or a
 #'   cached token-provider function accepting a logical `force` argument.
 #' @param api_telemetry_url Kineis telemetry API base URL.
 #' @param verbose Print the [httr2::request] object. Defaults to
 #'   [interactive()].
-#'
-#' Requests are paced to one per five seconds. HTTP 429 and 503 responses are retried,
-#' honoring the server's `Retry-After` header when present.
 #'
 #' @return A data.table containing all devices available to the login profile.
 #' @export
@@ -351,9 +351,13 @@ kineis_devlist <- function(
 #' @param verbose Print the [httr2::request] objects. Defaults to
 #'   [interactive()].
 #' @param page_handler Optional function called with each non-empty page before
-#'   the next page is requested. This permits incremental database writes.
+#'   the next page is requested. This permits incremental database writes. A
+#'   handler with a second argument also receives the page's `pageInfo`.
 #' @param collect Retain and return all downloaded pages. Set to `FALSE` when a
 #'   `page_handler` persists each page and the combined result is not needed.
+#' @param after_cursor Optional `endCursor` returned by an earlier request for
+#'   the same time interval and filters. This resumes an interrupted
+#'   pagination pass.
 #'
 #' @return A data.table with one row per telemetry message.
 #' @export
@@ -384,7 +388,8 @@ kineis_data <- function(
   datetime_format = "DATETIME",
   verbose = interactive(),
   page_handler = NULL,
-  collect = TRUE
+  collect = TRUE,
+  after_cursor = NULL
 ) {
   if (
     !is.numeric(page_size) ||
@@ -406,8 +411,20 @@ kineis_data <- function(
     stop("`collect` must be TRUE or FALSE.", call. = FALSE)
   }
 
+  if (
+    !is.null(after_cursor) &&
+      (
+        !is.character(after_cursor) ||
+          length(after_cursor) != 1 ||
+          is.na(after_cursor) ||
+          !nzchar(after_cursor)
+      )
+  ) {
+    stop("`after_cursor` must be one non-empty string or NULL.", call. = FALSE)
+  }
+
   pages <- list()
-  cursor <- NULL
+  cursor <- after_cursor
 
   repeat {
     body <- .kineis_data_page(
@@ -429,6 +446,32 @@ kineis_data <- function(
     )
 
     page <- .kineis_contents(body)
+    page_info <- body$pageInfo
+    has_next_page <- !is.null(page_info) &&
+      isTRUE(page_info$hasNextPage)
+    next_cursor <- NULL
+
+    if (has_next_page) {
+      next_cursor <- page_info$endCursor
+
+      if (
+        is.null(next_cursor) ||
+          length(next_cursor) != 1 ||
+          is.na(next_cursor) ||
+          !nzchar(next_cursor) ||
+          identical(as.character(next_cursor), cursor)
+      ) {
+        stop(
+          paste(
+            "Kineis pagination indicated another page but returned",
+            "no new cursor."
+          ),
+          call. = FALSE
+        )
+      }
+
+      next_cursor <- as.character(next_cursor)
+    }
 
     if (nrow(page) > 0) {
       if (collect) {
@@ -436,33 +479,94 @@ kineis_data <- function(
       }
 
       if (!is.null(page_handler)) {
-        page_handler(page)
+        handler_arguments <- formals(page_handler)
+
+        if (
+          "..." %in% names(handler_arguments) ||
+            length(handler_arguments) >= 2
+        ) {
+          page_handler(page, page_info)
+        } else {
+          page_handler(page)
+        }
       }
     }
 
-    page_info <- body$pageInfo
-
-    if (is.null(page_info) || !isTRUE(page_info$hasNextPage)) {
+    if (!has_next_page) {
       break
     }
 
-    next_cursor <- page_info$endCursor
-
-    if (
-      is.null(next_cursor) ||
-        length(next_cursor) != 1 ||
-        is.na(next_cursor) ||
-        !nzchar(next_cursor) ||
-        identical(as.character(next_cursor), cursor)
-    ) {
-      stop(
-        "Kineis pagination indicated another page but returned no new cursor.",
-        call. = FALSE
-      )
-    }
-
-    cursor <- as.character(next_cursor)
+    cursor <- next_cursor
   }
 
   rbindlist(pages, use.names = TRUE, fill = TRUE)
+}
+
+
+#' Count Kineis telemetry messages in a time interval ----
+#'
+#' Uses the bulk-count endpoint without a device filter, so the result covers
+#' every device available to the login profile. This is useful for sizing
+#' bounded historical download windows before retrieving their pages.
+#'
+#' @inheritParams kineis_data
+#'
+#' @return The total message count as a numeric scalar.
+#' @export
+#' @examples
+#' \dontrun{
+#' crd <- config::get(config = "kineis_api")
+#' token <- kineis_login(crd$un, crd$pwd, crd$auth_url)
+#' count <- kineis_data_count(
+#'   token,
+#'   crd$api_telemetry_url,
+#'   datetime = "2026-07-01T00:00:00.000Z",
+#'   end_datetime = "2026-07-02T00:00:00.000Z"
+#' )
+#' }
+kineis_data_count <- function(
+  token,
+  api_telemetry_url,
+  datetime,
+  end_datetime = NULL,
+  verbose = interactive()
+) {
+  payload <- list(fromDatetime = datetime)
+
+  if (!is.null(end_datetime)) {
+    payload$toDatetime <- end_datetime
+  }
+
+  body <- .kineis_perform_authenticated(
+    token,
+    function(access_token) {
+      x <- request(
+        .kineis_url(api_telemetry_url, "retrieve-bulk-count")
+      ) |>
+        req_headers(
+          accept = "application/json",
+          Authorization = glue("Bearer {access_token}")
+        ) |>
+        req_body_json(payload) |>
+        .kineis_request_policy()
+
+      if (verbose) {
+        .kineis_print_request(x)
+      }
+
+      x
+    }
+  ) |>
+    .kineis_response_body()
+
+  count <- suppressWarnings(as.numeric(body$totalCount))
+
+  if (length(count) != 1 || is.na(count) || !is.finite(count) || count < 0) {
+    stop(
+      "Kineis bulk-count response has no valid `totalCount`.",
+      call. = FALSE
+    )
+  }
+
+  count
 }

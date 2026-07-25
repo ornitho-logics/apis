@@ -19,8 +19,6 @@ cached token-provider function accepting a logical \code{force} argument.}
 A data.table containing all devices available to the login profile.
 }
 \description{
-List all Kineis devices for the login profile ----
-
 Requests are paced to one per five seconds. HTTP 429 and 503 responses are retried,
 honoring the server's \code{Retry-After} header when present.
 }

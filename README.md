@@ -65,7 +65,9 @@ return a data.table
 1. `kineis_login(un, pwd, auth_url)`: Obtain a JWT.
 2. `kineis_devlist(token, api_telemetry_url)`: Retrieve the device list.
 3. `kineis_data(token, api_telemetry_url, datetime, ...)`: Retrieve bulk
-   telemetry.
+   telemetry pages, optionally resuming from a saved cursor.
+4. `kineis_data_count(token, api_telemetry_url, datetime, ...)`: Count
+   account-wide telemetry messages to size historical retrieval windows.
 
 Kinéis bulk retrieval uses `pageInfo$endCursor`. Pages are requested in
 ascending `msgDatetime` order. Requests are paced, HTTP 429/503 responses are
