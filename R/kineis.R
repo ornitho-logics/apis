@@ -51,7 +51,11 @@ kineis_login <- function(
 }
 
 
-.kineis_access_token <- function(token) {
+.kineis_access_token <- function(token, force = FALSE) {
+  if (is.function(token)) {
+    token <- token(force = force)
+  }
+
   if (
     is.character(token) &&
       length(token) == 1 &&
@@ -74,6 +78,26 @@ kineis_login <- function(
   stop(
     "`token` must be an access-token string or the result of kineis_login().",
     call. = FALSE
+  )
+}
+
+
+.kineis_perform_authenticated <- function(token, request_factory) {
+  perform <- function(force = FALSE) {
+    access_token <- .kineis_access_token(token, force = force)
+    request_factory(access_token) |>
+      req_perform()
+  }
+
+  tryCatch(
+    perform(),
+    httr2_http_401 = function(e) {
+      if (!is.function(token)) {
+        stop(e)
+      }
+
+      perform(force = TRUE)
+    }
   )
 }
 
@@ -171,7 +195,8 @@ kineis_login <- function(
 
 #' List all Kineis devices for the login profile ----
 #'
-#' @param token Access-token string or the full result of [kineis_login()].
+#' @param token Access-token string, the full result of [kineis_login()], or a
+#'   cached token-provider function accepting a logical `force` argument.
 #' @param api_telemetry_url Kineis telemetry API base URL.
 #' @param verbose Print the [httr2::request] object. Defaults to
 #'   [interactive()].
@@ -192,22 +217,26 @@ kineis_devlist <- function(
   api_telemetry_url,
   verbose = interactive()
 ) {
-  access_token <- .kineis_access_token(token)
-  x <- request(
-    .kineis_url(api_telemetry_url, "retrieve-device-list")
+  body <- .kineis_perform_authenticated(
+    token,
+    function(access_token) {
+      x <- request(
+        .kineis_url(api_telemetry_url, "retrieve-device-list")
+      ) |>
+        req_headers(
+          accept = "application/json",
+          Authorization = glue("Bearer {access_token}")
+        ) |>
+        req_body_raw(charToRaw("{}"), type = "application/json") |>
+        .kineis_request_policy()
+
+      if (verbose) {
+        .kineis_print_request(x)
+      }
+
+      x
+    }
   ) |>
-    req_headers(
-      accept = "application/json",
-      Authorization = glue("Bearer {access_token}")
-    ) |>
-    req_body_raw(charToRaw("{}"), type = "application/json") |>
-    .kineis_request_policy()
-
-  if (verbose) {
-    .kineis_print_request(x)
-  }
-
-  body <- req_perform(x) |>
     .kineis_response_body()
 
   if (is.data.frame(body)) {
@@ -270,20 +299,24 @@ kineis_devlist <- function(
     payload$toDatetime <- end_datetime
   }
 
-  access_token <- .kineis_access_token(token)
-  x <- request(.kineis_url(api_telemetry_url, "retrieve-bulk")) |>
-    req_headers(
-      accept = "application/json",
-      Authorization = glue("Bearer {access_token}")
-    ) |>
-    req_body_json(payload) |>
-    .kineis_request_policy()
+  .kineis_perform_authenticated(
+    token,
+    function(access_token) {
+      x <- request(.kineis_url(api_telemetry_url, "retrieve-bulk")) |>
+        req_headers(
+          accept = "application/json",
+          Authorization = glue("Bearer {access_token}")
+        ) |>
+        req_body_json(payload) |>
+        .kineis_request_policy()
 
-  if (verbose) {
-    .kineis_print_request(x)
-  }
+      if (verbose) {
+        .kineis_print_request(x)
+      }
 
-  req_perform(x) |>
+      x
+    }
+  ) |>
     .kineis_response_body()
 }
 
@@ -300,7 +333,8 @@ kineis_devlist <- function(
 #' up to eight times within ten minutes, honoring the server's `Retry-After`
 #' header when present.
 #'
-#' @param token Access-token string or the full result of [kineis_login()].
+#' @param token Access-token string, the full result of [kineis_login()], or a
+#'   cached token-provider function accepting a logical `force` argument.
 #' @param api_telemetry_url Kineis telemetry API base URL.
 #' @param datetime Inclusive start time in UTC, formatted as RFC 3339 text.
 #' @param end_datetime Optional end time in UTC, formatted as RFC 3339 text.

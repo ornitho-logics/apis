@@ -6,6 +6,64 @@ kineis_json_response <- function(body) {
 }
 
 
+test_that("Kineis requests renew a provider token after HTTP 401", {
+  calls <- new.env(parent = emptyenv())
+  calls$force <- logical()
+  calls$access_tokens <- character()
+  calls$requests <- 0L
+  unauthorized <- structure(
+    list(
+      message = "HTTP 401 Unauthorized.",
+      call = NULL
+    ),
+    class = c(
+      "httr2_http_401",
+      "httr2_http",
+      "httr2_error",
+      "error",
+      "condition"
+    )
+  )
+  token_provider <- function(force = FALSE) {
+    calls$force <- c(calls$force, force)
+
+    if (force) "new-token" else "expired-token"
+  }
+
+  local_mocked_bindings(
+    req_perform = function(req) {
+      force(req)
+      calls$requests <- calls$requests + 1L
+
+      if (calls$requests == 1L) {
+        stop(unauthorized)
+      }
+
+      kineis_json_response("{}")
+    },
+    .package = "apis"
+  )
+
+  response <- .kineis_perform_authenticated(
+    token_provider,
+    function(access_token) {
+      calls$access_tokens <- c(calls$access_tokens, access_token)
+      httr2::request("https://api.example") |>
+        httr2::req_headers(
+          Authorization = paste("Bearer", access_token)
+        )
+    }
+  )
+
+  expect_s3_class(response, "httr2_response")
+  expect_equal(calls$force, c(FALSE, TRUE))
+  expect_equal(
+    calls$access_tokens,
+    c("expired-token", "new-token")
+  )
+})
+
+
 test_that("kineis_data follows bulk pagination and preserves long IDs", {
   requested_cursors <- list()
   handled_pages <- list()

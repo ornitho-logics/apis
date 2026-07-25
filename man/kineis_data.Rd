@@ -24,7 +24,8 @@ kineis_data(
 )
 }
 \arguments{
-\item{token}{Access-token string or the full result of \code{\link[=kineis_login]{kineis_login()}}.}
+\item{token}{Access-token string, the full result of \code{\link[=kineis_login]{kineis_login()}}, or a
+cached token-provider function accepting a logical \code{force} argument.}
 
 \item{api_telemetry_url}{Kineis telemetry API base URL.}
 
