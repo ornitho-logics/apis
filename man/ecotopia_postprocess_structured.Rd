@@ -25,7 +25,7 @@ ecotopia_postprocess_structured(
 A data.table with one row per decoded behavior sample.
 }
 \description{
-Decodes the base64 \code{data} payload returned by
+Decodes the base64 \code{behaviour} payload returned by
 \code{ecotopia_data(..., what = "structured")}. Encoding type 2 produces one
 predicted class per sample. Encoding type 4 produces the three leading
 classes and their normalized scores per sample.

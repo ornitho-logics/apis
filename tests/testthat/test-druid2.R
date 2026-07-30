@@ -166,14 +166,19 @@ structured_payload <- function(duration, count, values, size) {
 structured_record <- function(type, data) {
   data.table::data.table(
     id = as.character(glue::glue("record-{type}")),
-    device_id = "device-1",
     uuid = "uuid-1",
-    updated_at = "2026-06-01T01:00:00.125Z",
-    timestamp = "2026-06-01T00:00:00Z",
-    firmware_version = 101,
+    tag_id = "tag-1",
+    updated_at = as.POSIXct(
+      "2026-06-01 01:00:00.125",
+      tz = "UTC"
+    ),
+    timestamp = as.POSIXct(
+      "2026-06-01 00:00:00",
+      tz = "UTC"
+    ),
     version = 1,
     type = type,
-    data = data
+    behaviour = data
   )
 }
 
@@ -195,6 +200,7 @@ test_that("structured encoding type 2 decodes packed predictions", {
   )
 
   expect_equal(result$behavior_id, rep("record-2", 6))
+  expect_equal(result$tag_id, rep("tag-1", 6))
   expect_equal(result$prediction, predictions)
   expect_equal(
     as.numeric(difftime(
@@ -259,12 +265,12 @@ test_that("structured postprocessing filters records and skips bad payloads", {
   invalid <- data.table::copy(valid)
   invalid[, let(
     id = "record-invalid",
-    data = "AA=="
+    behaviour = "AA=="
   )]
   outside <- data.table::copy(valid)
   outside[, let(
     id = "record-outside",
-    timestamp = "2026-06-02T00:00:00Z"
+    timestamp = as.POSIXct("2026-06-02", tz = "UTC")
   )]
 
   result <- ecotopia_postprocess_structured(

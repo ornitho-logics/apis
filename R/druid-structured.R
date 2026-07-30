@@ -29,7 +29,7 @@
 
 
 .ecotopia_process_structured_v2 <- function(row) {
-  payload <- .ecotopia_decode_base64(row$data)
+  payload <- .ecotopia_decode_base64(row$behaviour)
 
   if (is.null(payload) || length(payload) < 4) {
     return(NULL)
@@ -78,9 +78,8 @@
 
   data.table(
     behavior_id = row$id,
-    device_id = row$device_id,
+    tag_id = row$tag_id,
     uuid = row$uuid,
-    firmware_version = row$firmware_version,
     payload_version = row$version,
     encoding_type = row$type,
     upload_time = row$upload_time,
@@ -93,7 +92,7 @@
 
 
 .ecotopia_process_structured_v4 <- function(row) {
-  payload <- .ecotopia_decode_base64(row$data)
+  payload <- .ecotopia_decode_base64(row$behaviour)
 
   if (is.null(payload) || length(payload) < 4) {
     return(NULL)
@@ -132,9 +131,8 @@
 
   data.table(
     behavior_id = row$id,
-    device_id = row$device_id,
+    tag_id = row$tag_id,
     uuid = row$uuid,
-    firmware_version = row$firmware_version,
     payload_version = row$version,
     encoding_type = row$type,
     upload_time = row$upload_time,
@@ -169,7 +167,7 @@
 
 #' Decode structured Ecotopia behavior data
 #'
-#' Decodes the base64 `data` payload returned by
+#' Decodes the base64 `behaviour` payload returned by
 #' `ecotopia_data(..., what = "structured")`. Encoding type 2 produces one
 #' predicted class per sample. Encoding type 4 produces the three leading
 #' classes and their normalized scores per sample.
@@ -192,14 +190,13 @@ ecotopia_postprocess_structured <- function(
 
   required_columns <- c(
     "id",
-    "device_id",
     "uuid",
+    "tag_id",
     "updated_at",
     "timestamp",
-    "firmware_version",
     "version",
     "type",
-    "data"
+    "behaviour"
   )
 
   missing_columns <- setdiff(required_columns, names(x))
@@ -212,11 +209,11 @@ ecotopia_postprocess_structured <- function(
   }
 
   x[, let(
-    upload_time = .ecotopia_parse_api_time(updated_at),
-    sample_time = .ecotopia_parse_api_time(timestamp)
+    upload_time = .ecotopia_parse_api_time(x[["updated_at"]]),
+    sample_time = .ecotopia_parse_api_time(x[["timestamp"]])
   )]
 
-  x <- x[!is.na(sample_time)]
+  x <- x[!is.na(x[["sample_time"]])]
 
   if (!is.null(from)) {
     from <- if (inherits(from, "POSIXt")) {
@@ -225,7 +222,7 @@ ecotopia_postprocess_structured <- function(
       .ecotopia_parse_api_time(from)
     }
 
-    x <- x[sample_time >= from]
+    x <- x[x[["sample_time"]] >= from]
   }
 
   if (!is.null(to)) {
@@ -235,7 +232,7 @@ ecotopia_postprocess_structured <- function(
       .ecotopia_parse_api_time(to)
     }
 
-    x <- x[sample_time <= to]
+    x <- x[x[["sample_time"]] <= to]
   }
 
   if (nrow(x) == 0) {
